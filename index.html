@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoAI - Moisture Content & OMC Analyzer</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="background-elements">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <nav class="navbar">
+        <div class="logo">Geo<span>AI</span></div>
+        <ul class="nav-links">
+            <li class="active" data-target="home">Home</li>
+            <li data-target="moisture">Moisture Content</li>
+            <li data-target="compaction">Compaction Test</li>
+            <li data-target="report">Report</li>
+        </ul>
+    </nav>
+
+    <main class="container">
+        <!-- Home View -->
+        <section id="home" class="view active">
+            <div class="hero">
+                <div class="hero-content">
+                    <h1>Determine <span>Moisture Content</span> & <span>OMC</span> with AI</h1>
+                    <p>A cutting-edge geotechnical engineering tool utilizing data analysis to automatically compute Optimum Moisture Content (OMC) and Maximum Dry Density (MDD) from standard Proctor tests.</p>
+                    <button class="btn-primary" onclick="navigateTo('moisture')">Start Analysis</button>
+                </div>
+                <div class="hero-image">
+                    <div class="glass-card hero-decorative-card">
+                        <div class="stat-row">
+                            <div class="stat-label">AI Accuracy</div>
+                            <div class="stat-value">99.8%</div>
+                        </div>
+                        <div class="stat-row">
+                            <div class="stat-label">Data Points</div>
+                            <div class="stat-value">Processed</div>
+                        </div>
+                        <div class="mini-chart"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Moisture Content View -->
+        <section id="moisture" class="view">
+            <h2>Calculate Moisture Content</h2>
+            <p class="subtitle">Enter your sample weights to calculate the moisture content (w).</p>
+            
+            <div class="form-grid">
+                <div class="glass-card input-card">
+                    <div class="input-group">
+                        <label for="w1">Weight of Empty Container (W1) [g]</label>
+                        <input type="number" id="w1" placeholder="e.g., 20.5" step="0.01">
+                    </div>
+                    <div class="input-group">
+                        <label for="w2">Weight of Container + Wet Soil (W2) [g]</label>
+                        <input type="number" id="w2" placeholder="e.g., 150.2" step="0.01">
+                    </div>
+                    <div class="input-group">
+                        <label for="w3">Weight of Container + Dry Soil (W3) [g]</label>
+                        <input type="number" id="w3" placeholder="e.g., 130.8" step="0.01">
+                    </div>
+                    <button class="btn-primary w-100 mt-4" onclick="calculateMoisture()">Calculate</button>
+                </div>
+
+                <div class="glass-card result-card" id="moisture-result-card">
+                    <h3>Result</h3>
+                    <div class="result-display">
+                        <span id="moisture-result-value">--</span>
+                        <span class="unit">%</span>
+                    </div>
+                    <div class="equation">
+                        w = [ (W2 - W3) / (W3 - W1) ] × 100
+                    </div>
+                    <button class="btn-secondary mt-4 w-100" onclick="navigateTo('compaction')">Proceed to Compaction Test</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Compaction Test View -->
+        <section id="compaction" class="view">
+            <h2>Compaction Test (AI Analysis)</h2>
+            <p class="subtitle">Enter mould dimensions, mass, and trial data to plot the compaction curve. The AI will fit a polynomial curve to find OMC and MDD.</p>
+            
+            <div class="glass-card mb-4">
+                <h3>1. Mould Observations</h3>
+                <div class="form-grid">
+                    <div class="input-group">
+                        <label for="mould-height">Height of Mould (cm)</label>
+                        <input type="number" id="mould-height" placeholder="e.g., 11.6" step="0.1" oninput="calculateMouldVolume()">
+                    </div>
+                    <div class="input-group">
+                        <label for="mould-diameter">Diameter of Mould (cm)</label>
+                        <input type="number" id="mould-diameter" placeholder="e.g., 10" step="0.1" oninput="calculateMouldVolume()">
+                    </div>
+                    <div class="input-group">
+                        <label for="mould-volume">Volume of Mould (cm³)</label>
+                        <input type="number" id="mould-volume" readonly class="readonly-input">
+                    </div>
+                    <div class="input-group">
+                        <label for="mould-mass">Mass of Empty Mould (g)</label>
+                        <input type="number" id="mould-mass" placeholder="e.g., 2000" step="0.1" oninput="updateCompactionCalculations()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dynamic Table Toolbar -->
+            <div class="flex-actions mb-2">
+                <button class="btn-secondary" onclick="addTrialColumn()">+ Add Trial Column</button>
+                <button class="btn-remove" onclick="removeTrialColumn()">- Remove Last Column</button>
+            </div>
+
+            <div class="glass-card table-card mb-4">
+                <h3>2. Compaction Test Data</h3>
+                <div class="table-responsive">
+                    <table class="matrix-table" id="compaction-table">
+                        <thead>
+                            <tr id="compaction-header-row">
+                                <th>Sl. No.</th>
+                                <th>Determinations</th>
+                                <!-- Dynamic dynamic columns -->
+                            </tr>
+                        </thead>
+                        <tbody id="compaction-tbody">
+                            <tr id="row-comp-mw">
+                                <td>1</td>
+                                <td>Mass of water added (mw) [g]</td>
+                                <!-- Dynamic inputs -->
+                            </tr>
+                            <tr id="row-comp-mms">
+                                <td>2</td>
+                                <td>Mass of mould + compacted soil (g)</td>
+                                <!-- Dynamic inputs -->
+                            </tr>
+                            <tr id="row-comp-ms" class="calc-row">
+                                <td>3</td>
+                                <td>Mass of compacted soil (M) [g]</td>
+                                <!-- Dynamic calculations -->
+                            </tr>
+                            <tr id="row-comp-bd" class="calc-row">
+                                <td>4</td>
+                                <td>Bulk Density (ρ) [g/cc]</td>
+                                <!-- Dynamic calculations -->
+                            </tr>
+                            <tr id="row-comp-dd" class="calc-row highlight-row">
+                                <td>5</td>
+                                <td>Dry Density (ρd) [g/cc]</td>
+                                <!-- Dynamic calculations -->
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="glass-card table-card mb-4">
+                <h3>3. Water Content Determination</h3>
+                <div class="table-responsive">
+                    <table class="matrix-table" id="water-content-table">
+                        <thead>
+                            <tr id="water-header-row">
+                                <th>Sl. No.</th>
+                                <th>Observations</th>
+                                <!-- Dynamic dynamic columns -->
+                            </tr>
+                        </thead>
+                        <tbody id="water-tbody">
+                            <tr id="row-wat-cn">
+                                <td>1</td>
+                                <td>Container No.</td>
+                                <!-- Dynamic inputs -->
+                            </tr>
+                            <tr id="row-wat-w1">
+                                <td>2</td>
+                                <td>Mass of container (W1) [g]</td>
+                                <!-- Dynamic inputs -->
+                            </tr>
+                            <tr id="row-wat-w2">
+                                <td>3</td>
+                                <td>Mass of container + wet soil (W2) [g]</td>
+                                <!-- Dynamic inputs -->
+                            </tr>
+                            <tr id="row-wat-w3">
+                                <td>4</td>
+                                <td>Mass of container + dry soil (W3) [g]</td>
+                                <!-- Dynamic inputs -->
+                            </tr>
+                            <tr id="row-wat-w" class="calc-row highlight-row">
+                                <td>5</td>
+                                <td>Water Content (w) [%]</td>
+                                <!-- Dynamic calculations -->
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="text-center mb-4">
+                <button class="btn-primary w-100" onclick="analyzeCompactionData()">Analyze Data & Plot Graph</button>
+            </div>
+
+            <div class="glass-card chart-card mb-4" id="chart-section" style="display: none;">
+                <h3>Compaction Curve</h3>
+                <div class="chart-container">
+                    <canvas id="compactionChart"></canvas>
+                </div>
+                <div class="ai-insights mt-4" id="ai-insights" style="display: none;">
+                    <div class="insight-pill">
+                        <span class="label">AI Predicted OMC:</span>
+                        <span class="value" id="ai-omc">-- %</span>
+                    </div>
+                    <div class="insight-pill">
+                        <span class="label">AI Predicted MDD:</span>
+                        <span class="value" id="ai-mdd">-- g/cc</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-right mt-4" id="proceed-report-btn" style="display: none;">
+                <button class="btn-primary" onclick="generateReport()">Generate Final Report</button>
+            </div>
+        </section>
+
+        <!-- Report View -->
+        <section id="report" class="view">
+            <div class="report-header">
+                <h2>Geotechnical AI Report</h2>
+                <button class="btn-secondary print-btn" onclick="window.print()">Print PDF</button>
+            </div>
+            
+            <div class="glass-card report-document" id="report-content">
+                <div class="report-branding">
+                    <div class="logo">Geo<span>AI</span></div>
+                    <div class="date" id="report-date"></div>
+                </div>
+                
+                <h3 class="section-title">1. Moisture Content Determination</h3>
+                <div class="report-grid">
+                    <div class="data-item">
+                        <span class="label">Empty Container (W1):</span>
+                        <span class="value" id="rep-w1">-- g</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="label">Wet Soil + Container (W2):</span>
+                        <span class="value" id="rep-w2">-- g</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="label">Dry Soil + Container (W3):</span>
+                        <span class="value" id="rep-w3">-- g</span>
+                    </div>
+                    <div class="data-item highlight">
+                        <span class="label">Calculated Moisture Content:</span>
+                        <span class="value" id="rep-moisture">-- %</span>
+                    </div>
+                </div>
+
+                <h3 class="section-title mt-4">2. Compaction Test Analysis</h3>
+                <div class="report-proctor-summary">
+                    <div class="ai-box">
+                        <h4>AI Regression Results</h4>
+                        <p>The AI algorithm utilized a second-degree polynomial regression to interpolate the compaction curve and identify the peak coordinates with high precision.</p>
+                        <div class="ai-stats">
+                            <div class="stat">
+                                <span class="label">Optimum Moisture Content (OMC):</span>
+                                <span class="value" id="rep-omc">-- %</span>
+                            </div>
+                            <div class="stat">
+                                <span class="label">Maximum Dry Density (MDD):</span>
+                                <span class="value" id="rep-mdd">-- g/cc</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="report-chart mt-4">
+                    <img id="report-chart-img" alt="Compaction Curve" />
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
